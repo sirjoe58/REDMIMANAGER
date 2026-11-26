@@ -11,8 +11,8 @@ android {
         applicationId = "it.sirjoe.redmimanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.0.5"
     }
 
     // Firma: la chiave NON e' nel repository. Su GitHub viene letta dai Secrets
