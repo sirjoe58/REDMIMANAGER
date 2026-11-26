@@ -107,8 +107,8 @@ class SmbDest(private val s: Settings) : Dest {
     }
 
     override fun check() {
-        if (!Dest.portOpen(nas.server, nas.port, 2500))
-            throw IllegalStateException("Il NAS ${nas.server} non risponde (spento, o non sei sulla rete di casa)")
+        if (!Dest.portOpen(nas.server, nas.port, 2500) && !(nas.port == 445 && Dest.portOpen(nas.server, 139, 1500)))
+            throw IllegalStateException(diagnosis())
         try {
             SmbFile(url("", true), ctx).use { d ->
                 if (!d.exists()) d.mkdirs()
@@ -117,6 +117,24 @@ class SmbDest(private val s: Settings) : Dest {
         } catch (e: Exception) {
             throw IllegalStateException(friendly(e))
         }
+    }
+
+    /** Spiega perche' il NAS non risponde: indirizzo, condivisione file spenta, rete diversa */
+    private fun diagnosis(): String {
+        val ip = try {
+            java.net.InetAddress.getByName(nas.server).hostAddress ?: nas.server
+        } catch (_: Exception) {
+            return "Il nome \"${nas.server}\" non viene trovato: scrivi l'indirizzo numerico del NAS (es. \\\\192.168.1.198\\FRITZ.NAS)"
+        }
+        if (Dest.portOpen(ip, 80, 2000) || Dest.portOpen(ip, 443, 1500))
+            return "Il dispositivo $ip è acceso ma non ha la condivisione file (SMB) attiva. Sul FRITZ!Box: " +
+                "http://$ip › Rete domestica › USB / Memoria › Condivisione nella rete domestica (Accesso tramite SMB)"
+        val mine = PcLink.localIpv4()
+        val sameNet = mine != null && mine.substringBeforeLast('.') == ip.substringBeforeLast('.')
+        return "All'indirizzo $ip non risponde nessun dispositivo. " +
+            (if (mine == null) "Il telefono non è collegato al Wi-Fi di casa. "
+            else if (!sameNet) "Il telefono è sulla rete ${mine.substringBeforeLast('.')}.x, il NAS su ${ip.substringBeforeLast('.')}.x: controlla l'indirizzo. "
+            else "") + "Controlla che il NAS sia acceso e che l'indirizzo sia giusto."
     }
 
     private fun friendly(e: Exception): String {

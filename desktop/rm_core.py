@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "Redmi Manager"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 PORT = 47810
 DISCOVERY_PORT = 47811
 ROOT = "RedmiManager"           # cartella dei backup (uguale su telefono, PC, chiavetta e NAS)
@@ -255,7 +255,7 @@ def scan_nas():
         h = f"{prefix}.{n}"
         if h in ips:
             return
-        if port_open(h, 445, 0.4):
+        if port_open(h, 445, 0.4) or port_open(h, 139, 0.3):
             try:
                 name = socket.gethostbyaddr(h)[0]
             except Exception:
@@ -656,6 +656,30 @@ def friendly_nas_error(server, port, err):
     return t
 
 
+def nas_diagnosis(server, port=445):
+    """None se il NAS risponde come cartella condivisa, altrimenti un messaggio che spiega il perche'."""
+    try:
+        ip = socket.gethostbyname(server)
+    except Exception:
+        return (f"Il nome \"{server}\" non viene trovato nella rete di casa. "
+                f"Scrivi l'indirizzo numerico del NAS (per il FRITZ!Box: \\\\192.168.1.198\\FRITZ.NAS).")
+    if port_open(ip, port, 3) or (port == 445 and port_open(ip, 139, 2)):
+        return None
+    mine = local_ips()
+    same = any(m.rsplit(".", 1)[0] == ip.rsplit(".", 1)[0] for m in mine)
+    if port_open(ip, 80, 2) or port_open(ip, 443, 2):
+        return (f"Il dispositivo {ip} è acceso ma non ha la condivisione file (SMB) attiva.\n"
+                "Sul FRITZ!Box: apri http://" + ip + " › Rete domestica › USB / Memoria › "
+                "Condivisione nella rete domestica (o \"Accesso tramite SMB\") e attivala, poi riprova.")
+    msg = f"All'indirizzo {ip} non risponde nessun dispositivo.\n"
+    if not same and mine:
+        msg += (f"Questo computer è sulla rete {mine[0].rsplit('.', 1)[0]}.x, il NAS invece su "
+                f"{ip.rsplit('.', 1)[0]}.x: probabilmente l'indirizzo è vecchio o sbagliato. ")
+    msg += ("Controlla che il NAS sia acceso, che l'indirizzo sia giusto (prova ad aprire http://" + ip +
+            " nel browser) e che una VPN (es. Cloudflare WARP) non stia bloccando la rete di casa.")
+    return msg
+
+
 class FolderTarget:
     """Copia su una cartella del disco (es. la chiavetta USB)."""
 
@@ -737,16 +761,20 @@ class NasTarget:
     def connect(self):
         if self.mode:
             return
-        if not port_open(self.server, self.port, 3):
-            raise ConnectionError(f"Il NAS {self.server} non è raggiungibile (spento o fuori rete)")
+        diag = nas_diagnosis(self.server, self.port)
         errors = []
+        if diag and not (IS_WIN and self.port == 445):
+            raise ConnectionError(diag)
         if IS_WIN and self.port == 445:
+            # Windows puo' raggiungere il NAS anche per vie che il controllo veloce non vede
             try:
                 self._native_connect()
                 self.mode = "windows"
                 return
             except Exception as e:
                 errors.append(e)
+            if diag:
+                raise ConnectionError(diag)
         try:
             self._smb_connect()
             self.mode = "smb"
@@ -1081,9 +1109,13 @@ class AutoSync:
         if not forced and not changed and now - self._last_nas_try < 60 and self.nas_state != "non visto":
             return
         self._last_nas_try = now
-        if not port_open(server, port, 2):
-            if self.nas_state not in ("non visto",):
-                log(f"NAS {server} non raggiungibile: copio appena torna disponibile")
+        reachable = port_open(server, port, 2) or (port == 445 and port_open(server, 139, 2))
+        if not reachable and IS_WIN:
+            reachable = os.path.isdir(parse_nas_path(self.cfg["nas_path"])[2])
+        if not reachable:
+            if self.nas_state != "non visto":
+                log(f"NAS {server} non raggiungibile: copio appena torna disponibile. "
+                    f"{nas_diagnosis(server, port) or ''}".strip())
             self.nas_state = "non visto"
             return
         was_down = self.nas_state != "collegato"
