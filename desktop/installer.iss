@@ -20,6 +20,7 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 LicenseFile=LEGGIMI_AVVERTENZE.txt
 WizardStyle=modern
+CloseApplications=force
 
 [Languages]
 Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
@@ -44,3 +45,14 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 ; consente al programma di ricevere i backup dai telefoni nella rete privata di casa
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Redmi Manager"" dir=in action=allow program=""{app}\RedmiManager.exe"" profile=private"; Flags: runhidden runascurrentuser; Check: IsAdminInstallMode
 Filename: "{app}\RedmiManager.exe"; Description: "Avvia Redmi Manager"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// Chiude Redmi Manager se e' aperto (anche nascosto), cosi' i file si possono sostituire
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Code: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM RedmiManager.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Sleep(800);
+  Result := '';
+end;
