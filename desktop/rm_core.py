@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "Redmi Manager"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 PORT = 47810
 DISCOVERY_PORT = 47811
 ROOT = "RedmiManager"           # cartella dei backup (uguale su telefono, PC, chiavetta e NAS)
