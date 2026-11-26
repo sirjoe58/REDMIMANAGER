@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RedmiManager" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#E8590C</item>
+        <item name="colorSecondary">#1F6F8B</item>
+    </style>
+</resources>
