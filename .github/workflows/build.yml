@@ -102,6 +102,17 @@ jobs:
             --collect-submodules keyring.backends --hidden-import pystray._win32 `
             --add-data "LEGGIMI_AVVERTENZE.txt;." --add-data "icona.png;." redmi_manager.py
           if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Prova di avvio del programma
+        shell: pwsh
+        run: |
+          $d = "$env:APPDATA\RedmiManager"
+          Remove-Item "$d\prova_ok.txt","$d\errore_avvio.txt" -ErrorAction SilentlyContinue
+          $p = Start-Process desktop\dist\RedmiManager.exe -ArgumentList "--prova" -PassThru
+          if (-not $p.WaitForExit(90000)) { $p.Kill(); Write-Host "::error::Il programma non si chiude (bloccato)" }
+          if (Test-Path "$d\registro.txt") { Get-Content "$d\registro.txt" }
+          if (Test-Path "$d\errore_avvio.txt") { Get-Content "$d\errore_avvio.txt"; Write-Host "::error::Errore all'avvio"; exit 1 }
+          if (-not (Test-Path "$d\prova_ok.txt")) { Write-Host "::error::Prova di avvio non riuscita"; exit 1 }
+          Get-Content "$d\prova_ok.txt"
       - name: Crea programma di installazione
         shell: pwsh
         run: |
@@ -137,6 +148,13 @@ jobs:
             --osx-bundle-identifier it.sirjoe.redmimanager \
             --collect-submodules keyring.backends \
             --add-data "LEGGIMI_AVVERTENZE.txt:." --add-data "icona.png:." redmi_manager.py
+          # prova di avvio
+          D="$HOME/Library/Application Support/RedmiManager"
+          rm -f "$D/prova_ok.txt" "$D/errore_avvio.txt"
+          ( "dist/Redmi Manager.app/Contents/MacOS/Redmi Manager" --prova & P=$!; sleep 60; kill $P 2>/dev/null ) || true
+          cat "$D/registro.txt" 2>/dev/null || true
+          if [ -f "$D/errore_avvio.txt" ]; then cat "$D/errore_avvio.txt"; echo "::error::Errore all'avvio (Mac)"; exit 1; fi
+          if [ ! -f "$D/prova_ok.txt" ]; then echo "::warning::Prova di avvio Mac non conclusa"; fi
           mkdir -p dmg
           cp -R "dist/Redmi Manager.app" dmg/
           ln -s /Applications dmg/Applicazioni
