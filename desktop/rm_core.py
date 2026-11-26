@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "Redmi Manager"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 PORT = 47810
 DISCOVERY_PORT = 47811
 ROOT = "RedmiManager"           # cartella dei backup (uguale su telefono, PC, chiavetta e NAS)
@@ -394,6 +394,12 @@ class PhoneServer:
             def do_GET(self):
                 try:
                     r = self._route()
+                    if r == "/api/mostra":
+                        # un secondo avvio del programma chiede a questo di mostrarsi
+                        if self.client_address[0] not in ("127.0.0.1", "::1"):
+                            return self._send(403, {"errore": "solo da questo PC"})
+                        server.on_change("show")
+                        return self._send(200, {"ok": True})
                     if r == "/api/info":
                         if not self._auth():
                             return

@@ -113,6 +113,19 @@ jobs:
           if (Test-Path "$d\errore_avvio.txt") { Get-Content "$d\errore_avvio.txt"; Write-Host "::error::Errore all'avvio"; exit 1 }
           if (-not (Test-Path "$d\prova_ok.txt")) { Write-Host "::error::Prova di avvio non riuscita"; exit 1 }
           Get-Content "$d\prova_ok.txt"
+      - name: Prova del primo avvio (finestra delle avvertenze visibile)
+        shell: pwsh
+        run: |
+          Remove-Item "$env:APPDATA\RedmiManager" -Recurse -Force -ErrorAction SilentlyContinue
+          $p = Start-Process desktop\dist\RedmiManager.exe -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 40; $i++) {
+            Start-Sleep -Seconds 1
+            $w = Get-Process -Name RedmiManager -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -ne "" }
+            if ($w) { Write-Host "Finestra visibile: $($w.MainWindowTitle)"; $ok = $true; break }
+          }
+          Get-Process -Name RedmiManager -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { Write-Host "::error::Al primo avvio non compare nessuna finestra"; exit 1 }
       - name: Crea programma di installazione
         shell: pwsh
         run: |

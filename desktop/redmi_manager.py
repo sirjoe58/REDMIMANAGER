@@ -104,14 +104,18 @@ class App:
             text = "Avvertenze non trovate."
         win = tk.Toplevel(self.root)
         win.title("Avvertenze – Redmi Manager")
+        try:
+            win.iconphoto(False, tk.PhotoImage(file=resource("icona.png")))
+        except Exception:
+            pass
         win.geometry("760x600")
         result = {"ok": not first}
         t = scrolledtext.ScrolledText(win, wrap="word", font=(FONT[0], FONT[1] - 1))
         t.insert("1.0", text)
         t.configure(state="disabled")
-        t.pack(fill="both", expand=True, padx=10, pady=10)
         bar = ttk.Frame(win)
-        bar.pack(fill="x", padx=10, pady=(0, 10))
+        bar.pack(side="bottom", fill="x", padx=10, pady=(0, 10))
+        t.pack(fill="both", expand=True, padx=10, pady=10)
 
         def accept():
             result["ok"] = True
@@ -124,14 +128,28 @@ class App:
             ttk.Button(bar, text="Non accetto", command=win.destroy).pack(side="right", padx=8)
         else:
             ttk.Button(bar, text="Chiudi", command=win.destroy).pack(side="right")
-        win.transient(self.root)
-        win.grab_set()
         if first:
+            # La finestra principale e' nascosta: le avvertenze devono essere una finestra
+            # indipendente (non "transient"), altrimenti su Windows restano invisibili.
             self.root.withdraw()
             win.protocol("WM_DELETE_WINDOW", win.destroy)
+            win.update_idletasks()
+            x = max(0, (win.winfo_screenwidth() - 760) // 2)
+            y = max(0, (win.winfo_screenheight() - 600) // 3)
+            win.geometry(f"760x600+{x}+{y}")
+            win.deiconify()
+            win.lift()
+            win.attributes("-topmost", True)
+            win.after(1500, lambda: win.attributes("-topmost", False))
+            win.focus_force()
             self.root.wait_window(win)
             if result["ok"]:
                 self.root.deiconify()
+                self.root.lift()
+                self.root.focus_force()
+        else:
+            win.transient(self.root)
+            win.grab_set()
         return result["ok"]
 
     # ------------------------------------------------------------------ interfaccia
@@ -333,7 +351,9 @@ class App:
             self.start_tray()
 
     def on_server_change(self, what):
-        if what == "code":
+        if what == "show":
+            self.show()
+        elif what == "code":
             self.show_code()
         elif what == "phones":
             self.load_phones()
@@ -687,10 +707,23 @@ def crash_report(exc_text):
         pass
 
 
+def already_running():
+    """Se Redmi Manager e' gia' aperto gli chiede di mostrarsi e restituisce True."""
+    import urllib.request
+    port = int(core.load_config().get("port", core.PORT))
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/mostra", timeout=3) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+
 def main():
     import traceback
     hidden = "--nascosto" in sys.argv
     test = "--prova" in sys.argv
+    if not test and already_running():
+        return
     try:
         root = tk.Tk()
         root.report_callback_exception = lambda *a: core.log("Errore: " + "".join(traceback.format_exception(*a)))
