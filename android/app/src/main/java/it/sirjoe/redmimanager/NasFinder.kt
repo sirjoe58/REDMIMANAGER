@@ -23,7 +23,7 @@ object NasFinder {
             val tasks = (1..254).map { n ->
                 Callable {
                     val h = "$prefix.$n"
-                    if (h != ip && Dest.portOpen(h, 445, 400)) h else null
+                    if (h != ip && (Dest.portOpen(h, 445, 400) || Dest.portOpen(h, 139, 300))) h else null
                 }
             }
             val hosts = pool.invokeAll(tasks, 30, TimeUnit.SECONDS).mapNotNull {
