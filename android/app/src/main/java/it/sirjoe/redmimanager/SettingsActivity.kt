@@ -166,6 +166,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun testNas() {
         save()
+        nasPath.setText(s.nasPath)
         if (s.nasPath.isBlank()) { Ui.message(this, "NAS", "Scrivi prima il percorso del NAS o premi \"Cerca il NAS in rete\"."); return }
         val wait = AlertDialog.Builder(this).setMessage("Provo a collegarmi al NAS…").setCancelable(false).show()
         lifecycleScope.launch {
