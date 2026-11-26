@@ -1,0 +1,158 @@
+name: Compila Redmi Manager
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      pubblica:
+        description: "Pubblica una nuova release (versione presa dal programma)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Compila APK
+        shell: bash
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/rilascio.keystore"
+            export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/rilascio.keystore"
+          else
+            echo "::warning::Secrets della chiave Android mancanti: l'apk e' firmato con una chiave di prova"
+          fi
+          cp LEGGIMI_AVVERTENZE.txt android/app/src/main/res/raw/avvertenze.txt
+          cd android
+          echo "sdk.dir=${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > local.properties
+          chmod +x gradlew
+          set +e
+          ./gradlew --no-daemon assembleDebug 2>&1 | tee build.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" -ne 0 ]; then
+            grep -E "^e: |error:|What went wrong|Could not|Execution failed" build.log | head -60 | while IFS= read -r l; do
+              echo "::error::${l//%/%25}"
+            done
+            exit 1
+          fi
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/out/RedmiManager-Android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RedmiManager-Android
+          path: out/
+          retention-days: 7
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compila EXE
+        shell: pwsh
+        run: |
+          Copy-Item LEGGIMI_AVVERTENZE.txt desktop\ -Force
+          Set-Location desktop
+          python -m pip install -r requirements.txt
+          python -m PyInstaller --noconfirm --onefile --windowed --name RedmiManager --icon icona.ico `
+            --collect-submodules keyring.backends --hidden-import pystray._win32 `
+            --add-data "LEGGIMI_AVVERTENZE.txt;." --add-data "icona.png;." redmi_manager.py
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Crea programma di installazione
+        shell: pwsh
+        run: |
+          Set-Location desktop
+          $env:APP_VERSION = (Select-String -Path rm_core.py -Pattern 'APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc installer.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\out" | Out-Null
+          Copy-Item dist\RedmiManager-Setup.exe "$env:GITHUB_WORKSPACE\out\"
+          Copy-Item dist\RedmiManager.exe "$env:GITHUB_WORKSPACE\out\RedmiManager-portatile.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RedmiManager-Windows
+          path: out/
+          retention-days: 7
+
+  mac:
+    # Intel: funziona sugli iMac Intel e (con Rosetta) sui Mac con Apple Silicon
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compila app Mac
+        run: |
+          cp LEGGIMI_AVVERTENZE.txt desktop/
+          cd desktop
+          python -m pip install -r requirements.txt
+          python -m PyInstaller --noconfirm --windowed --name "Redmi Manager" --icon icona.png \
+            --osx-bundle-identifier it.sirjoe.redmimanager \
+            --collect-submodules keyring.backends \
+            --add-data "LEGGIMI_AVVERTENZE.txt:." --add-data "icona.png:." redmi_manager.py
+          mkdir -p dmg
+          cp -R "dist/Redmi Manager.app" dmg/
+          ln -s /Applications dmg/Applicazioni
+          cp LEGGIMI_AVVERTENZE.txt dmg/
+          hdiutil create -volname "Redmi Manager" -srcfolder dmg -ov -format UDZO RedmiManager-Mac.dmg
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp RedmiManager-Mac.dmg "$GITHUB_WORKSPACE/out/"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RedmiManager-Mac
+          path: out/
+          retention-days: 7
+
+  release:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.pubblica) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[release]'))
+    needs: [android, windows, mac]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Pubblica la release
+        run: |
+          mkdir up
+          cp dist/RedmiManager-Android/RedmiManager-Android.apk up/
+          cp dist/RedmiManager-Windows/RedmiManager-Setup.exe up/
+          cp dist/RedmiManager-Windows/RedmiManager-portatile.exe up/
+          cp dist/RedmiManager-Mac/RedmiManager-Mac.dmg up/
+          cp LEGGIMI_AVVERTENZE.txt up/
+          VER=$(grep -m1 -oP 'APP_VERSION = "\K[^"]+' desktop/rm_core.py)
+          TAG="v$VER"
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::La release $TAG esiste gia': aumenta APP_VERSION in desktop/rm_core.py"
+            exit 1
+          fi
+          gh release create "$TAG" up/* -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Redmi Manager $TAG" \
+            --notes "Telefono: RedmiManager-Android.apk – Windows: RedmiManager-Setup.exe (o la versione portatile) – Mac: RedmiManager-Mac.dmg. Prima dell'uso leggi LEGGIMI_AVVERTENZE.txt."
+      - name: Tieni solo le ultime 2 versioni
+        run: |
+          gh release list -R "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[2:] | .[].tagName' | while read t; do
+            echo "Cancello $t"; gh release delete "$t" -R "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          done

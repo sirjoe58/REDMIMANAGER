@@ -1,0 +1,93 @@
+REDMI MANAGER – AVVERTENZE, MODALITÀ D'USO E LIMITAZIONE DI RESPONSABILITÀ
+Versione 1 – novembre 2026
+
+Leggere attentamente prima di installare o utilizzare il programma.
+Installando, avviando o usando Redmi Manager (versione Android, Windows o Mac) dichiari di aver letto, compreso e accettato integralmente quanto segue. Se non accetti, non installare e non usare il programma.
+
+
+1. COSA FA IL PROGRAMMA
+
+Redmi Manager crea copie di sicurezza (backup) dei dati di un telefono Android e permette di rimetterli sul telefono (ripristino), senza usare i servizi di Google o di altri fornitori cloud.
+I backup vengono salvati, a scelta dell'utente, su:
+- un NAS o una cartella di rete di casa (protocollo SMB, come le cartelle condivise di Windows);
+- una chiavetta USB o una cartella scelta sul telefono;
+- un PC Windows o Mac di casa su cui è aperto il programma Redmi Manager.
+Il programma per PC può copiare a sua volta i backup ricevuti su una chiavetta USB e sul NAS.
+Il programma non invia dati a terzi: comunica solo con i dispositivi della rete di casa indicati dall'utente.
+
+Dati che possono essere salvati: rubrica, SMS, registro chiamate, calendario, foto e video, documenti e download, musica e registrazioni, file di WhatsApp, file di installazione delle app (APK) con il loro elenco, cartella del backup di fabbrica del telefono (Xiaomi, Samsung, Huawei, OPPO e altre marche), cartelle aggiunte dall'utente.
+
+LIMITI IMPORTANTI (dovuti ad Android, non eliminabili senza modificare il telefono):
+- I dati interni delle app (accessi, impostazioni, progressi) NON possono essere copiati direttamente. Per salvarli si usa il backup di fabbrica della marca del telefono, che Redmi Manager aiuta ad avviare e poi copia.
+- Le password delle reti Wi-Fi salvate non possono essere lette.
+- Il ripristino delle app richiede la conferma dell'utente per ciascuna app.
+- Il ripristino degli SMS richiede di rendere Redmi Manager "app SMS predefinita" per pochi minuti; al termine l'utente deve rimettere la sua app Messaggi come predefinita.
+- I backup NON sono cifrati: chi ha accesso al NAS, al PC o alla chiavetta può leggerne il contenuto (rubrica, messaggi, foto). Proteggi questi dispositivi.
+
+
+2. MODALITÀ D'USO
+
+a) Sul telefono: installare l'app, accettare queste avvertenze, scegliere la marca del telefono (predefinita: Xiaomi / Redmi / POCO) e concedere i permessi richiesti, compreso "Accesso a tutti i file".
+b) In "Impostazioni" scegliere cosa salvare e dove: NAS (percorso, utente, password, oppure "Cerca NAS"), chiavetta USB o cartella, PC di casa (codice QR o codice a 6 cifre mostrato dal programma per PC).
+c) Con il backup automatico attivo, il telefono controlla periodicamente se il NAS, il PC o la chiavetta sono raggiungibili e, appena li vede, esegue il backup se è passato l'intervallo scelto. Android può ritardare questi controlli per risparmiare batteria.
+d) Le foto, i video e gli altri file vengono copiati in un "Archivio" unico: alla volta successiva si copiano solo i file nuovi o modificati. I file cancellati dal telefono NON vengono cancellati dall'archivio. Rubrica, SMS, chiamate, calendario ed elenco app vengono salvati in copie datate; si conservano le ultime copie nel numero scelto, le più vecchie vengono cancellate.
+e) Per ripristinare: "Ripristina", scegliere da dove, il telefono di origine, la data e cosa ripristinare.
+f) Sul PC: avviare Redmi Manager, scegliere la cartella dei backup e, se si desidera, la chiavetta USB e il NAS su cui copiarli. Il programma deve restare aperto (anche ridotto a icona) per ricevere i backup. Al primo avvio il firewall potrebbe chiedere di consentire l'accesso alla rete privata: va consentito.
+g) Controllare periodicamente il "Registro attività" e provare ogni tanto un ripristino di prova, per verificare che i backup siano completi e leggibili.
+
+
+3. AVVERTENZE
+
+- Un backup è utile solo se è completo e funzionante: verificalo. L'autore non garantisce che ogni dato venga salvato o ripristinato.
+- Il funzionamento dipende da fattori esterni non controllabili dall'autore: modello e versione di Android del telefono, personalizzazioni del produttore, risparmio energetico, rete Wi-Fi, NAS, PC, chiavette, antivirus e firewall.
+- Il ripristino scrive dati sul telefono (contatti, messaggi, chiamate, eventi, file, app). Possono crearsi doppioni. Prima di ripristinare su un telefono che contiene già dati, fai un backup di quel telefono.
+- La funzione "Pulizia" cancella i file selezionati dall'utente. I file cancellati non possono essere recuperati: controlla bene prima di confermare.
+- Verifica che NAS, PC e chiavette abbiano spazio sufficiente.
+- Le password del NAS sono conservate con i sistemi di protezione disponibili (archivio cifrato di Android, Gestione credenziali di Windows, Portachiavi del Mac). Proteggi i dispositivi con password o blocco schermo.
+- Su Windows e Mac, al primo avvio, il sistema potrebbe segnalare il programma come "non riconosciuto" perché non firmato digitalmente.
+
+
+4. USO CONSENTITO E DIVIETO DI USO ILLECITO
+
+Il programma può essere usato esclusivamente su telefoni, NAS, PC e chiavette di tua proprietà o per i quali hai l'autorizzazione esplicita del titolare.
+
+È VIETATO ogni uso illecito, tra cui a titolo di esempio:
+- copiare dati, messaggi, contatti o file dal telefono di un'altra persona senza il suo consenso;
+- accedere senza autorizzazione a reti o dispositivi altrui;
+- trattare dati personali di terzi in violazione del Regolamento UE 2016/679 (GDPR) e della normativa sulla privacy;
+- violare il segreto della corrispondenza, i diritti d'autore o altri diritti di terzi.
+
+L'autore non è in alcun modo responsabile dell'uso illecito o non autorizzato del programma: ogni conseguenza civile, penale o amministrativa ricade esclusivamente su chi lo ha commesso.
+
+
+5. ESCLUSIONE DI GARANZIA
+
+Il programma è fornito "COSÌ COM'È" ("AS IS"), senza garanzie di alcun tipo, esplicite o implicite, incluse a titolo esemplificativo le garanzie di funzionamento, assenza di errori, completezza dei backup, continuità del servizio, idoneità a uno scopo particolare, compatibilità con telefoni, NAS o computer specifici.
+
+
+6. LIMITAZIONE DI RESPONSABILITÀ
+
+Nei limiti massimi consentiti dalla legge applicabile, l'autore e chiunque abbia contribuito alla realizzazione o distribuzione del programma non sono responsabili per alcun danno, diretto o indiretto, derivante dall'uso o dall'impossibilità di usare il programma, inclusi ma non limitati a:
+- perdita, danneggiamento, cancellazione, sovrascrittura o mancato salvataggio di dati, contatti, messaggi, foto, file o app;
+- backup incompleti, illeggibili o non ripristinabili;
+- doppioni o dati errati creati dal ripristino;
+- file cancellati con la funzione "Pulizia";
+- malfunzionamenti, blocchi o danni a telefoni, computer, NAS, chiavette, reti o altri dispositivi;
+- accessi non autorizzati ai backup dovuti a dispositivi non adeguatamente protetti;
+- danni economici, mancati guadagni, interruzioni di attività.
+
+Restano salve le responsabilità che per legge non possono essere escluse.
+
+
+7. RESPONSABILITÀ DELL'UTENTE
+
+Ciascun utente usa il programma a proprio rischio e si assume la piena ed esclusiva responsabilità:
+- della correttezza delle impostazioni inserite;
+- della legittimità dell'uso e dei dati trattati;
+- della sicurezza dei propri dispositivi e dei backup;
+- della verifica periodica dei backup e dell'esecuzione di ulteriori copie di sicurezza.
+
+
+8. ACCETTAZIONE
+
+Premendo "Accetto" (o proseguendo con l'installazione) dichiari di aver letto e accettato queste avvertenze. Senza accettazione il programma non può essere usato.

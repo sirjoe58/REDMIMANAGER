@@ -1,0 +1,6 @@
+smbprotocol>=1.13
+keyring>=24
+pystray>=0.19
+pillow>=10
+qrcode>=7.4
+pyinstaller>=6.6
