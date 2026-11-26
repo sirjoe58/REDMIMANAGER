@@ -256,7 +256,12 @@ class SafDest(private val ctx: Context, private val tree: Uri, private val name:
         val ok = try {
             cr.persistedUriPermissions.any { it.uri == tree && it.isWritePermission } && run {
                 children.clear(); dirIds.clear(); dirIds[""] = rootId
-                kids(rootId); true
+                // la chiavetta deve essere davvero collegata: si legge la cartella stessa
+                val present = cr.query(DocumentsContract.buildDocumentUriUsingTree(tree, rootId),
+                    arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID), null, null, null)
+                    ?.use { it.moveToFirst() } ?: false
+                if (present) kids(rootId)
+                present
             }
         } catch (_: Exception) {
             false

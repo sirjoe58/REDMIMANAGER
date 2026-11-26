@@ -13,8 +13,37 @@ on:
 permissions:
   contents: write
 
+# Nota: niente "artifact" (lo spazio dell'account e' esaurito): i file vanno direttamente nella release.
+env:
+  PUBBLICA: ${{ (github.event_name == 'workflow_dispatch' && inputs.pubblica) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[release]')) }}
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
+  prepara:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Versione
+        run: |
+          VER=$(grep -m1 -oP 'APP_VERSION = "\K[^"]+' desktop/rm_core.py)
+          echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+      - name: Crea la release (bozza)
+        if: env.PUBBLICA == 'true'
+        run: |
+          TAG="${{ steps.v.outputs.tag }}"
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::La release $TAG esiste gia': aumenta APP_VERSION in desktop/rm_core.py"
+            exit 1
+          fi
+          gh release create "$TAG" LEGGIMI_AVVERTENZE.txt -R "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" \
+            --title "Redmi Manager $TAG" \
+            --notes "Telefono: RedmiManager-Android.apk – Windows: RedmiManager-Setup.exe (o la versione portatile) – Mac: RedmiManager-Mac.dmg. Prima dell'uso leggi LEGGIMI_AVVERTENZE.txt."
+
   android:
+    needs: prepara
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,13 +79,13 @@ jobs:
           fi
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/out/RedmiManager-Android.apk"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: RedmiManager-Android
-          path: out/
-          retention-days: 7
+      - name: Carica nella release
+        if: env.PUBBLICA == 'true'
+        shell: bash
+        run: gh release upload "${{ needs.prepara.outputs.tag }}" out/* -R "$GITHUB_REPOSITORY" --clobber
 
   windows:
+    needs: prepara
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,13 +114,13 @@ jobs:
           New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\out" | Out-Null
           Copy-Item dist\RedmiManager-Setup.exe "$env:GITHUB_WORKSPACE\out\"
           Copy-Item dist\RedmiManager.exe "$env:GITHUB_WORKSPACE\out\RedmiManager-portatile.exe"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: RedmiManager-Windows
-          path: out/
-          retention-days: 7
+      - name: Carica nella release
+        if: env.PUBBLICA == 'true'
+        shell: bash
+        run: gh release upload "${{ needs.prepara.outputs.tag }}" out/* -R "$GITHUB_REPOSITORY" --clobber
 
   mac:
+    needs: prepara
     # Intel: funziona sugli iMac Intel e (con Rosetta) sui Mac con Apple Silicon
     runs-on: macos-15-intel
     steps:
@@ -115,44 +144,22 @@ jobs:
           hdiutil create -volname "Redmi Manager" -srcfolder dmg -ov -format UDZO RedmiManager-Mac.dmg
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp RedmiManager-Mac.dmg "$GITHUB_WORKSPACE/out/"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: RedmiManager-Mac
-          path: out/
-          retention-days: 7
+      - name: Carica nella release
+        if: env.PUBBLICA == 'true'
+        shell: bash
+        run: gh release upload "${{ needs.prepara.outputs.tag }}" out/* -R "$GITHUB_REPOSITORY" --clobber
 
-  release:
+  pubblica:
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.pubblica) ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[release]'))
-    needs: [android, windows, mac]
+    needs: [prepara, android, windows, mac]
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
       - name: Pubblica la release
-        run: |
-          mkdir up
-          cp dist/RedmiManager-Android/RedmiManager-Android.apk up/
-          cp dist/RedmiManager-Windows/RedmiManager-Setup.exe up/
-          cp dist/RedmiManager-Windows/RedmiManager-portatile.exe up/
-          cp dist/RedmiManager-Mac/RedmiManager-Mac.dmg up/
-          cp LEGGIMI_AVVERTENZE.txt up/
-          VER=$(grep -m1 -oP 'APP_VERSION = "\K[^"]+' desktop/rm_core.py)
-          TAG="v$VER"
-          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::La release $TAG esiste gia': aumenta APP_VERSION in desktop/rm_core.py"
-            exit 1
-          fi
-          gh release create "$TAG" up/* -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Redmi Manager $TAG" \
-            --notes "Telefono: RedmiManager-Android.apk – Windows: RedmiManager-Setup.exe (o la versione portatile) – Mac: RedmiManager-Mac.dmg. Prima dell'uso leggi LEGGIMI_AVVERTENZE.txt."
+        run: gh release edit "${{ needs.prepara.outputs.tag }}" -R "$GITHUB_REPOSITORY" --draft=false --latest
       - name: Tieni solo le ultime 2 versioni
         run: |
-          gh release list -R "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt --jq 'sort_by(.createdAt) | reverse | .[2:] | .[].tagName' | while read t; do
+          gh release list -R "$GITHUB_REPOSITORY" --limit 100 --json tagName,createdAt,isDraft --jq '[.[] | select(.isDraft | not)] | sort_by(.createdAt) | reverse | .[2:] | .[].tagName' | while read t; do
             echo "Cancello $t"; gh release delete "$t" -R "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
           done
