@@ -45,8 +45,10 @@ class BackupWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             if (!s.autoEnabled || !s.anyDestination()) {
                 wm.cancelUniqueWork(AUTO); return
             }
+            // con la chiavetta non serve la rete; per NAS e PC si aspetta una connessione
+            val net = if (s.usbEnabled) NetworkType.NOT_REQUIRED else NetworkType.CONNECTED
             val req = PeriodicWorkRequestBuilder<BackupWorker>(15, TimeUnit.MINUTES)
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(net).build())
                 .build()
             wm.enqueueUniquePeriodicWork(AUTO, ExistingPeriodicWorkPolicy.UPDATE, req)
         }
