@@ -665,15 +665,57 @@ class App:
         self.root.destroy()
 
 
-def main():
-    hidden = "--nascosto" in sys.argv
-    root = tk.Tk()
-    App(root, hidden=hidden)
+def crash_report(exc_text):
+    """Salva l'errore in un file e lo mostra, cosi' si capisce perche' il programma non parte."""
+    path = os.path.join(core.APP_DIR, "errore_avvio.txt")
     try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"{core.APP_NAME} {core.APP_VERSION} – {core.system_info()}\n\n{exc_text}")
+    except Exception:
+        pass
+    core.log("ERRORE: " + exc_text.strip().splitlines()[-1] if exc_text.strip() else "ERRORE")
+    msg = f"Redmi Manager non riesce ad avviarsi.\n\nL'errore è salvato in:\n{path}\n\n{exc_text[-900:]}"
+    if "--prova" in sys.argv:
+        return
+    try:
+        if core.IS_WIN:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, msg, "Redmi Manager – errore", 0x10)
+        else:
+            messagebox.showerror("Redmi Manager – errore", msg)
+    except Exception:
+        pass
+
+
+def main():
+    import traceback
+    hidden = "--nascosto" in sys.argv
+    test = "--prova" in sys.argv
+    try:
+        root = tk.Tk()
+        root.report_callback_exception = lambda *a: core.log("Errore: " + "".join(traceback.format_exception(*a)))
+        if test:
+            # prova automatica: avvia tutto, attende qualche secondo e chiude
+            cfg = core.load_config()
+            cfg["disclaimer"] = core.DISCLAIMER_VERSION
+            core.save_config(cfg)
+            app = App(root)
+            def done():
+                with open(os.path.join(core.APP_DIR, "prova_ok.txt"), "w", encoding="utf-8") as f:
+                    f.write("OK " + ", ".join(core.local_ips()))
+                app.quit()
+            root.after(6000, done)
+        else:
+            App(root, hidden=hidden)
         if root.winfo_exists():
             root.mainloop()
-    except (KeyboardInterrupt, tk.TclError):
-        pass
+    except (KeyboardInterrupt, tk.TclError) as e:
+        if test:
+            crash_report(traceback.format_exc())
+            sys.exit(1)
+    except Exception:
+        crash_report(traceback.format_exc())
+        sys.exit(1)
 
 
 if __name__ == "__main__":
