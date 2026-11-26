@@ -61,7 +61,7 @@ jobs:
             echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/rilascio.keystore"
             export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/rilascio.keystore"
           else
-            echo "::warning::Secrets della chiave Android mancanti: l'apk e' firmato con una chiave di prova"
+            echo "::error::Mancano i Secrets ANDROID_KEYSTORE_B64 e ANDROID_KEYSTORE_PASSWORD"; [ "$PUBBLICA" = "true" ] && exit 1
           fi
           cp LEGGIMI_AVVERTENZE.txt android/app/src/main/res/raw/avvertenze.txt
           cd android
