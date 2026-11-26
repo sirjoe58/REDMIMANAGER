@@ -63,7 +63,9 @@ object Util {
     /** Accetta \\server\condivisa\sotto, //server/condivisa o smb://server/condivisa */
     /** http://192.168.1.198/nas#/files/Disco/Cartella (pagina del FRITZ!Box) -> \\192.168.1.198\FRITZ.NAS\Disco\Cartella */
     fun fritzWebToSmb(path: String): String {
-        val p = path.trim()
+        var p = path.trim()
+        if (Regex("^(\\\\\\\\|//)[^/\\\\]+[/\\\\]nas#", RegexOption.IGNORE_CASE).containsMatchIn(p))
+            p = "http://" + p.trimStart('\\', '/').replace('\\', '/')   // //192.168.1.198/nas#/files/... senza http:
         if (!p.lowercase().startsWith("http://") && !p.lowercase().startsWith("https://")) return p
         val u = android.net.Uri.parse(p)
         val host = u.host ?: return p

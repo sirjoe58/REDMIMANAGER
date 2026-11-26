@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "Redmi Manager"
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 PORT = 47810
 DISCOVERY_PORT = 47811
 ROOT = "RedmiManager"           # cartella dei backup (uguale su telefono, PC, chiavetta e NAS)
@@ -625,6 +625,8 @@ def fritz_web_to_smb(path):
     -> percorso di rete \\\\192.168.1.198\\FRITZ.NAS\\Disco\\Cartella. Altri testi restano uguali."""
     from urllib.parse import unquote, urlparse
     p = (path or "").strip()
+    if re.match(r"^(\\\\|//)[^/\\]+[/\\]nas#", p, re.I):
+        p = "http://" + p.lstrip("\\/").replace("\\", "/")     # //192.168.1.198/nas#/files/... senza http:
     if not re.match(r"^https?://", p, re.I):
         return p
     u = urlparse(p)
@@ -669,6 +671,16 @@ def friendly_nas_error(server, port, err):
     if any(k in low for k in ("bad_network_name", "winerror 67", "network name")):
         return f"La cartella condivisa indicata non esiste sul NAS: controlla il nome dopo l'indirizzo. [{t[:150]}]"
     return t
+
+
+def same_place(backup_dir, nas_path):
+    """True se la cartella dei backup del PC e' gia' la stessa cartella del NAS"""
+    try:
+        unc = parse_nas_path(nas_path)[2]
+    except Exception:
+        return False
+    norm = lambda x: os.path.normcase(x.replace("/", "\\").rstrip("\\"))
+    return norm(backup_dir) == norm(unc)
 
 
 def nas_diagnosis(server, port=445):
@@ -1118,6 +1130,9 @@ class AutoSync:
             server, port, _ = parse_nas_path(self.cfg["nas_path"])
         except ValueError as e:
             self.nas_state = f"errore: {e}"
+            return
+        if same_place(self.cfg["backup_dir"], self.cfg["nas_path"]):
+            self.nas_state = "la cartella del PC è già sul NAS: i backup vanno direttamente lì"
             return
         now = time.time()
         # controllo veloce ogni minuto: appena il NAS risponde si copia

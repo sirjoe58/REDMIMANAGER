@@ -252,6 +252,7 @@ class App:
             ttk.Entry(g, textvariable=var, width=50, show=show).grid(row=i, column=1, sticky="w", padx=6, pady=2)
         b = ttk.Frame(f)
         b.grid(row=11, column=0, columnspan=3, sticky="w", pady=4)
+        ttk.Button(b, text="Scegli la cartella del NAS…", command=self.browse_nas).pack(side="left", padx=(0, 6))
         ttk.Button(b, text="Salva e prova", command=self.test_nas).pack(side="left")
         ttk.Button(b, text="Cerca il NAS in rete", command=self.find_nas).pack(side="left", padx=6)
         ttk.Button(b, text="Copia adesso su chiavetta e NAS", command=lambda: self.sync and self.sync.now()).pack(side="left")
@@ -443,7 +444,15 @@ class App:
         d = filedialog.askdirectory(title="Cartella dove salvare i backup", initialdir=self.cfg["backup_dir"])
         if not d:
             return
-        self.cfg["backup_dir"] = os.path.abspath(d)
+        d = os.path.abspath(d)
+        if d.replace("/", "\\").startswith("\\\\"):
+            if not messagebox.askyesno("Cartella del PC",
+                                       "Hai scelto una cartella di rete (NAS) come cartella del PC.\n\n"
+                                       "Va bene se vuoi che i backup ricevuti vadano direttamente sul NAS, ma se il NAS è "
+                                       "spento i telefoni non potranno salvare sul PC.\n\nConsiglio: lascia una cartella del PC "
+                                       "e indica il NAS più sotto, nella sezione \"NAS di casa\".\n\nUsare comunque questa cartella?"):
+                return
+        self.cfg["backup_dir"] = d
         core.save_config(self.cfg)
         self.dir_var.set(self.cfg["backup_dir"])
         self.load_saved()
@@ -515,6 +524,24 @@ class App:
                 messagebox.showinfo("NAS collegato", f"Il NAS risponde. I backup verranno copiati in:\n{r}")
                 self.sync.now()
         self.bg(work, done)
+
+    def browse_nas(self):
+        """Scelta della cartella del NAS con la finestra di Windows/Mac (come in Esplora file)."""
+        start = ""
+        try:
+            start = core.parse_nas_path(self.nas_path.get())[2]
+        except Exception:
+            start = "\\\\192.168.1.198\\fritz.nas" if core.IS_WIN else ""
+        d = filedialog.askdirectory(title="Scegli la cartella del NAS dove salvare i backup", initialdir=start or None)
+        if not d:
+            return
+        d = d.replace("/", "\\")
+        if not d.startswith("\\\\"):
+            messagebox.showinfo("NAS", "Scegli una cartella di rete (deve iniziare con \\\\, es. \\\\192.168.1.198\\fritz.nas\\...).\n"
+                                       "Se il NAS è collegato come lettera (es. Z:), usa il percorso di rete.")
+            return
+        self.nas_path.set(d)
+        self.test_nas()
 
     def find_nas(self):
         self.nas_status.configure(text="Cerco i NAS nella rete di casa… (circa 15 secondi)")
