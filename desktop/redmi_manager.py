@@ -481,7 +481,9 @@ class App:
 
     def save_nas(self):
         self.cfg["nas_enabled"] = bool(self.nas_on.get())
-        self.cfg["nas_path"] = self.nas_path.get().strip()
+        path = core.fritz_web_to_smb(self.nas_path.get().strip())
+        self.nas_path.set(path)
+        self.cfg["nas_path"] = path
         self.cfg["nas_user"] = self.nas_user.get().strip()
         self.cfg["nas_domain"] = self.nas_dom.get().strip()
         core.set_nas_password(self.nas_pass.get())

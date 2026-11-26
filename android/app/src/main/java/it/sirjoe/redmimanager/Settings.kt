@@ -75,7 +75,7 @@ class Settings(context: Context) {
 
     // ---------------------------------------------------------- NAS
     var nasEnabled: Boolean get() = bool("nas_on", false); set(v) = setBool("nas_on", v)
-    var nasPath: String get() = str("nas_path"); set(v) = setStr("nas_path", v.trim())
+    var nasPath: String get() = str("nas_path"); set(v) = setStr("nas_path", Util.fritzWebToSmb(v))
     var nasUser: String get() = str("nas_user"); set(v) = setStr("nas_user", v.trim())
     var nasDomain: String get() = str("nas_domain"); set(v) = setStr("nas_domain", v.trim())
     var nasPassword: String

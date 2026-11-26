@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "Redmi Manager"
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 PORT = 47810
 DISCOVERY_PORT = 47811
 ROOT = "RedmiManager"           # cartella dei backup (uguale su telefono, PC, chiavetta e NAS)
@@ -620,9 +620,24 @@ class PhoneServer:
 
 # ---------------------------------------------------------------- destinazioni della copia (chiavetta, NAS)
 
+def fritz_web_to_smb(path):
+    """Indirizzo della pagina web del FRITZ!Box (http://192.168.1.198/nas#/files/Disco/Cartella)
+    -> percorso di rete \\\\192.168.1.198\\FRITZ.NAS\\Disco\\Cartella. Altri testi restano uguali."""
+    from urllib.parse import unquote, urlparse
+    p = (path or "").strip()
+    if not re.match(r"^https?://", p, re.I):
+        return p
+    u = urlparse(p)
+    host = u.hostname or ""
+    m = re.search(r"files/?(.*)$", unquote(u.fragment or "")) or re.search(r"/nas/?(.*)$", unquote(u.path or ""))
+    sub = (m.group(1) if m else "").strip("/")
+    parts = [x for x in sub.split("/") if x]
+    return "\\\\" + host + "\\FRITZ.NAS" + "".join("\\" + x for x in parts)
+
+
 def parse_nas_path(path):
     """Converte \\\\server\\share\\sub, //server/share/sub o smb://server/share/sub in (server, porta, unc)."""
-    p = (path or "").strip()
+    p = fritz_web_to_smb(path)
     p = re.sub(r"^smb://", "", p, flags=re.I)
     p = p.replace("/", "\\").strip("\\")
     parts = [x for x in p.split("\\") if x]
